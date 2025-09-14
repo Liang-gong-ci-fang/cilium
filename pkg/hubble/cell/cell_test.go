@@ -38,7 +38,7 @@ func TestHubbleConfigProvider(t *testing.T) {
 	assert.NotNil(t, providedConfig, "HubbleConfig should be provided")
 
 	// Test the default configuration values
-	assert.Equal(t, "", providedConfig.GetListenAddress(), "Default listen address should be empty")
+	assert.Empty(t, providedConfig.GetListenAddress(), "Default listen address should be empty")
 	assert.False(t, providedConfig.GetPreferIPv6(), "Default prefer IPv6 should be false")
 }
 
@@ -102,6 +102,6 @@ func TestInterfaceAdapters(t *testing.T) {
 	assert.NotNil(t, providedConfig, "HubbleConfig should be provided by InterfaceAdapters")
 
 	// Test with default config values
-	assert.Equal(t, "", providedConfig.GetListenAddress())
+	assert.Empty(t, providedConfig.GetListenAddress())
 	assert.False(t, providedConfig.GetPreferIPv6())
 }
