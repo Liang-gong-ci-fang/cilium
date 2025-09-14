@@ -39,6 +39,9 @@ var Cell = cell.Module(
 
 	Core,
 
+	// Interface adapters group provides interface implementations for other components
+	InterfaceAdapters,
+
 	// Hubble TLS certificates
 	certloaderGroup,
 
@@ -64,6 +67,14 @@ var Cell = cell.Module(
 var Core = cell.Group(
 	cell.Provide(newHubbleIntegration),
 	cell.Config(defaultConfig),
+)
+
+// InterfaceAdapters provides interface implementations and adapters
+// for connecting Hubble core components with external dependencies.
+// This group can be extended with more interface adapters as needed.
+var InterfaceAdapters = cell.Group(
+	// Provide HubbleConfig interface for peer service and other components
+	cell.Provide(func(cfg config) peercell.HubbleConfig { return cfg }),
 )
 
 type hubbleParams struct {
