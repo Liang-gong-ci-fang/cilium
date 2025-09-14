@@ -22,6 +22,8 @@ import (
 	"github.com/cilium/cilium/pkg/hubble/observer/observeroption"
 	"github.com/cilium/cilium/pkg/hubble/parser"
 	parsercell "github.com/cilium/cilium/pkg/hubble/parser/cell"
+	"github.com/cilium/cilium/pkg/hubble/peer"
+	peercell "github.com/cilium/cilium/pkg/hubble/peer/cell"
 	identitycell "github.com/cilium/cilium/pkg/identity/cache/cell"
 	"github.com/cilium/cilium/pkg/ipcache"
 	monitorAgent "github.com/cilium/cilium/pkg/monitor/agent"
@@ -38,6 +40,9 @@ var Cell = cell.Module(
 
 	Core,
 
+	// Configuration providers group creates config objects for other components
+	ConfigProviders,
+
 	// Hubble TLS certificates
 	certloaderGroup,
 
@@ -52,6 +57,9 @@ var Cell = cell.Module(
 
 	// Drop event emitter flow processor
 	dropeventemitter.Cell,
+
+	// Peer service for handling peer discovery and notifications
+	peercell.Cell,
 )
 
 // The core cell group, which contains the Hubble integration and the
@@ -60,6 +68,20 @@ var Cell = cell.Module(
 var Core = cell.Group(
 	cell.Provide(newHubbleIntegration),
 	cell.Config(defaultConfig),
+)
+
+// ConfigProviders provides configuration objects for Hubble components.
+// This group creates and provides configuration structs by combining
+// different configuration sources (hubble config, TLS config, etc.).
+var ConfigProviders = cell.Group(
+	// Provide HubbleConfig struct for peer service and other components
+	cell.Provide(func(cfg config, tlsCfg certloaderConfig) *peercell.HubbleConfig {
+		return &peercell.HubbleConfig{
+			ListenAddress:   cfg.ListenAddress,
+			PreferIpv6:      cfg.PreferIpv6,
+			EnableServerTLS: !tlsCfg.DisableServerTLS,
+		}
+	}),
 )
 
 type hubbleParams struct {
@@ -90,6 +112,8 @@ type hubbleParams struct {
 	GRPCMetrics          *grpc_prometheus.ServerMetrics
 	MetricsFlowProcessor metrics.FlowProcessor
 
+	PeerService *peer.Service
+
 	Config config
 }
 
@@ -99,7 +123,7 @@ type HubbleIntegration interface {
 }
 
 func newHubbleIntegration(params hubbleParams) (HubbleIntegration, error) {
-	h, err := new(
+	h, err := createHubbleIntegration(
 		params.IdentityAllocator,
 		params.EndpointManager,
 		params.IPCache,
@@ -114,6 +138,7 @@ func newHubbleIntegration(params hubbleParams) (HubbleIntegration, error) {
 		params.PayloadParser,
 		params.GRPCMetrics,
 		params.MetricsFlowProcessor,
+		params.PeerService,
 		params.Config,
 		params.Logger,
 	)
