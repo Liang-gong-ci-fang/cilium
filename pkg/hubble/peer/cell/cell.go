@@ -6,8 +6,8 @@ package cell
 import (
 	"fmt"
 	"log/slog"
+	"net"
 	"strconv"
-	"strings"
 
 	"github.com/cilium/hive/cell"
 
@@ -59,24 +59,16 @@ func (p *peerServiceImpl) Service() *peer.Service {
 
 // getPort extracts the port from an address string.
 // Supports formats like ":4244", "localhost:4244", "[::1]:4244"
-func getPort(address string) (int, error) {
-	// Handle IPv6 addresses in brackets
-	if strings.Contains(address, "]:") {
-		parts := strings.Split(address, "]:")
-		if len(parts) == 2 {
-			return strconv.Atoi(parts[1])
-		}
+func getPort(addr string) (int, error) {
+	_, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return 0, fmt.Errorf("parse host address and port: %w", err)
 	}
-
-	// Handle regular addresses with colon
-	if strings.Contains(address, ":") {
-		parts := strings.Split(address, ":")
-		if len(parts) >= 2 {
-			return strconv.Atoi(parts[len(parts)-1])
-		}
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return 0, fmt.Errorf("parse port number: %w", err)
 	}
-
-	return 0, fmt.Errorf("unable to extract port from address: %s", address)
+	return portNum, nil
 }
 
 func newPeerService(params peerServiceParams) (PeerService, error) {
@@ -97,6 +89,7 @@ func newPeerService(params peerServiceParams) (PeerService, error) {
 	if addr := params.Config.GetListenAddress(); addr != "" {
 		port, err := getPort(addr)
 		if err != nil {
+			// TODO: bubble up the error and/or set cell health as degraded
 			params.Logger.Warn(
 				"Hubble server will not pass port information in change notifications on exposed Hubble peer service",
 				logfields.Error, err,
