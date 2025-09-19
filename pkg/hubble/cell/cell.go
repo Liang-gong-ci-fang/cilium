@@ -70,20 +70,6 @@ var Core = cell.Group(
 	cell.Config(defaultConfig),
 )
 
-// ConfigProviders provides configuration objects for Hubble components.
-// This group creates and provides configuration structs by combining
-// different configuration sources (hubble config, TLS config, etc.).
-var ConfigProviders = cell.Group(
-	// Provide HubbleConfig struct for peer service and other components
-	cell.Provide(func(cfg config, tlsCfg certloaderConfig) *peercell.HubbleConfig {
-		return &peercell.HubbleConfig{
-			ListenAddress:   cfg.ListenAddress,
-			PreferIpv6:      cfg.PreferIpv6,
-			EnableServerTLS: !tlsCfg.DisableServerTLS,
-		}
-	}),
-)
-
 type hubbleParams struct {
 	cell.In
 

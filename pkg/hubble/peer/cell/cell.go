@@ -39,6 +39,7 @@ type peerServiceParams struct {
 	Lifecycle   cell.Lifecycle
 	NodeManager nodeManager.NodeManager
 	Config      *HubbleConfig
+	Health      cell.Health
 }
 
 // getPort extracts the port from an address string.
@@ -72,7 +73,10 @@ func newPeerService(params peerServiceParams) (*peer.Service, error) {
 	if addr := params.Config.ListenAddress; addr != "" {
 		port, err := getPort(addr)
 		if err != nil {
-			// TODO: bubble up the error and/or set cell health as degraded
+			params.Health.Degraded(
+				"Hubble server will not pass port information in change notifications on exposed Hubble peer service",
+				err,
+			)
 			params.Logger.Warn(
 				"Hubble server will not pass port information in change notifications on exposed Hubble peer service",
 				logfields.Error, err,
@@ -88,7 +92,6 @@ func newPeerService(params peerServiceParams) (*peer.Service, error) {
 	// Register stop hook to properly close the peer service
 	params.Lifecycle.Append(cell.Hook{
 		OnStop: func(cell.HookContext) error {
-			params.Logger.Debug("Closing Hubble peer service")
 			return service.Close()
 		},
 	})
